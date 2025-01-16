@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
-import { Public } from './common/decorators/auth/public.decorator';
+import { Public } from '@leocodeio-njs/njs-auth';
 import { ApiSecurity } from '@nestjs/swagger';
 
 @Controller()

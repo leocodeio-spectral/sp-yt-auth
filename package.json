@@ -20,6 +20,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@leocodeio-njs/njs-auth": "0.0.6",
+    "@leocodeio-njs/njs-config": "^0.0.3",
+    "@leocodeio-njs/njs-health": "0.0.2",
+    "@leocodeio-njs/njs-logging": "^0.0.2",
+    "@leocodeio-njs/njs-response": "^0.0.2",
     "@nestjs/axios": "^3.1.3",
     "@nestjs/common": "^10.4.15",
     "@nestjs/config": "^3.3.0",

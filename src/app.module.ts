@@ -1,15 +1,15 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LoggingModule } from './utils/logging/logging.module';
-import { HealthModule } from './utils/health/health.module';
-import { ApiKeyGuard } from './common/guards/x-api-key/x-api-key.guard';
+import { LoggingModule } from '@leocodeio-njs/njs-logging';
+import { HealthModule } from '@leocodeio-njs/njs-health';
+import { ApiKeyGuard } from '@leocodeio-njs/njs-auth';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { LoggingInterceptor } from './utils/logging/logging.interceptor';
-import { AuthModule } from './common/guards/auth.module';
-import { AppConfigModule } from './common/config/config.module';
+import { LoggingInterceptor } from '@leocodeio-njs/njs-logging';
+import { AuthModule } from '@leocodeio-njs/njs-auth';
+import { AppConfigModule } from '@leocodeio-njs/njs-config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppConfigService } from './common/config/config.service';
+import { AppConfigService } from '@leocodeio-njs/njs-config';
 import { YtAuthModule } from './modules/youtube/yt-auth.module';
 
 @Module({
