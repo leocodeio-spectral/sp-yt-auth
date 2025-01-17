@@ -18,6 +18,7 @@ import { YtAuthModule } from './modules/youtube/yt-auth.module';
     HealthModule,
     AuthModule,
     AppConfigModule,
+    YtAuthModule,
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule, YtAuthModule],
       useFactory: (configService: AppConfigService) => ({
