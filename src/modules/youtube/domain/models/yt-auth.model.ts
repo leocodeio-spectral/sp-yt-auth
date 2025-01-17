@@ -1,11 +1,11 @@
-import { YtAuthStatus } from '../enums/yt-auth-status.enum';
+import { YtCreatorStatus } from '../enums/yt-creator-status.enum';
 
-export interface IYtAuthEntity {
+export interface IYtCreatorEntity {
   id: string;
   creatorId: string;
-  accessTokenText: string;
-  refreshTokenText: string;
-  status: YtAuthStatus;
+  accessToken: string;
+  refreshToken: string;
+  status: YtCreatorStatus;
   createAt: Date;
   updatedAt: Date;
 }
