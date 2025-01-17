@@ -2,14 +2,16 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  PrimaryColumn,
+  Generated,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 
 @Entity({ name: 'yt_auth' })
 export class YtAuthEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryGeneratedColumn('uuid')
+  @Generated('uuid')
   id: string;
 
   @Column({ name: 'creator_id', type: 'uuid', unique: true })

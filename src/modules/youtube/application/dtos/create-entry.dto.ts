@@ -7,8 +7,9 @@ import {
   IsOptional,
 } from 'class-validator';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
+import { BaseDto } from '../../../common/base.dto';
 
-export class CreateEntryDto {
+export class CreateEntryDto extends BaseDto {
   @ApiProperty({
     description: 'Creator UUID',
     example: '123e4567-e89b-12d3-a456-426614174000',
