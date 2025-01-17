@@ -5,7 +5,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { YtAuthStatus } from '../../domain/enums/yt-auth-status.enum';
+import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 
 @Entity({ name: 'yt_auth' })
 export class YtAuthEntity {
@@ -23,10 +23,10 @@ export class YtAuthEntity {
 
   @Column({
     type: 'enum',
-    enum: YtAuthStatus,
-    default: YtAuthStatus.ACTIVE,
+    enum: YtCreatorStatus,
+    default: YtCreatorStatus.ACTIVE,
   })
-  status: YtAuthStatus;
+  status: YtCreatorStatus;
 
   @CreateDateColumn({ name: 'create_at' })
   createAt: Date;

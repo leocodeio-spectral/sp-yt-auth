@@ -6,7 +6,7 @@ import {
   IsEnum,
   IsOptional,
 } from 'class-validator';
-import { YtAuthStatus } from '../../domain/enums/yt-auth-status.enum';
+import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 
 export class CreateEntryDto {
   @ApiProperty({
@@ -35,10 +35,11 @@ export class CreateEntryDto {
 
   @ApiProperty({
     description: 'Authentication status',
-    enum: YtAuthStatus,
-    example: YtAuthStatus.ACTIVE,
+    enum: YtCreatorStatus,
+    example: YtCreatorStatus.ACTIVE,
   })
-  @IsEnum(YtAuthStatus)
+  
+  @IsEnum(YtCreatorStatus)
   @IsNotEmpty()
-  status: YtAuthStatus;
+  status: YtCreatorStatus;
 }
