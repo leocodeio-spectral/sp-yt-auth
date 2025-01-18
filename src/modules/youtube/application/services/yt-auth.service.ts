@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { google } from 'googleapis';
+import { google, youtube_v3 } from 'googleapis';
 import * as fs from 'fs';
 import { IYtCreatorEntity } from '../../../creator/domain/models/yt-creator.model';
 import { YtCreatorStatus } from '../../../creator/domain/enums/yt-creator-status.enum';
@@ -13,6 +13,7 @@ import { GetCreatorEntryModel } from '../../../creator/domain/enums/get-creator-
 import { CreateEntryDto } from '../../../creator/application/dtos/create-entry.dto';
 import { Inject } from '@nestjs/common';
 import { YtCreatorService } from '../../../creator/application/services/yt-creator.service';
+import { Readable } from 'stream';
 
 @Injectable()
 export class YtAuthService {
@@ -178,6 +179,101 @@ export class YtAuthService {
       }
     } catch (error) {
       this.logger.error('Failed to get channel info:', error);
+      throw error;
+    }
+  }
+
+  async uploadVideo(
+    creatorId: string,
+    videoFile: Express.Multer.File,
+    metadata: {
+      title: string;
+      description: string;
+      tags?: string[];
+      privacyStatus?: 'private' | 'unlisted' | 'public';
+    },
+  ): Promise<any> {
+    this.logger.log('Starting video upload for creator:', creatorId);
+
+    try {
+      // Get creator credentials
+      const creator = await this.ytCreatorService.getCreatorEntries({
+        creatorId: creatorId,
+        status: YtCreatorStatus.active,
+      } as GetCreatorEntryModel);
+
+      if (creator.length === 0) {
+        throw new NotFoundException('No authenticated creator found');
+      }
+      this.logger.log('Creator found - yt-auth.service.ts', creator);
+      // Set credentials
+
+      try {
+        this.oauth2Client.setCredentials({
+          access_token: creator[0].accessToken,
+          refresh_token: creator[0].refreshToken,
+        });
+      } catch (error) {
+        this.logger.error('Failed to set credentials:', error);
+        throw new InternalServerErrorException(
+          'Failed to set credentials to YouTube api',
+        );
+      }
+
+      let youtube: youtube_v3.Youtube;
+      try {
+        youtube = google.youtube({
+          version: 'v3',
+          auth: this.oauth2Client,
+        });
+      } catch (error) {
+        this.logger.error('Failed to start instance of youtube api:', error);
+        throw new InternalServerErrorException(
+          'Failed to start instance of youtube api',
+        );
+      }
+
+      this.logger.log('Youtube api instance started - yt-auth.service.ts');
+
+      // Prepare upload body
+      try {
+        const requestBody = {
+          snippet: {
+            title: metadata.title,
+            description: metadata.description,
+            tags: metadata.tags || [],
+            categoryId: '22', // Entertainment category
+          },
+          status: {
+            privacyStatus: metadata.privacyStatus || 'private',
+            selfDeclaredMadeForKids: false,
+          },
+        };
+
+        // Create a readable stream from the buffer
+        const readableStream = new Readable();
+        readableStream.push(videoFile.buffer);
+        readableStream.push(null);
+
+        // Upload video with the stream
+        const response = await youtube.videos.insert({
+          part: ['snippet', 'status'],
+          requestBody: requestBody,
+          media: {
+            body: readableStream,
+          },
+        });
+
+        this.logger.log('Video uploaded successfully:', response.data);
+        return response.data;
+      } catch (error) {
+        this.logger.error('Failed to upload video:', error);
+        throw new InternalServerErrorException(
+          'Failed to upload video to YouTube api',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to upload video:', error);
       throw error;
     }
   }
