@@ -32,8 +32,8 @@ export class YtAuthController {
   }
 
   @Get('channel-info')
-  async getChannelInfo(@Query('creatorId') creatorId: string) {
-    return this.ytAuthService.getChannelInfo(creatorId);
+  async getChannelInfo(@Query('id') id: string) {
+    return this.ytAuthService.getChannelInfo(id);
   }
 
   @Post('upload')
