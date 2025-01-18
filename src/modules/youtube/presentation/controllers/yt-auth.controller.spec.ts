@@ -1,19 +1,18 @@
 import { LoggerService, LoggingModule } from '@leocodeio-njs/njs-logging';
 import { Test, TestingModule } from '@nestjs/testing';
-import { CreateEntryDto } from '../../application/dtos/create-entry.dto';
-import { UpdateEntryDto } from '../../application/dtos/update-entry.dto';
 import { YtAuthService } from '../../application/services/yt-auth.service';
-import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
-import { IYtCreatorEntity } from '../../domain/models/yt-auth.model';
 import { YtAuthController } from './yt-auth.controller';
-import { IYtAuthRepository } from '../../domain/ports/yt-auth.repository';
-import { YtAuthRepository } from '../../infrastructure/adapters/yt-auth.repository';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { YtAuthEntity } from '../../infrastructure/entities/yt-auth.entity';
-import { AppConfigModule, AppConfigService } from '@leocodeio-njs/njs-config';
+import { AppConfigModule } from '@leocodeio-njs/njs-config';
 import { YtAuthModule } from '../../yt-auth.module';
-import { GetCreatorEntryModel } from '../../domain/enums/get-creator-entry.model';
+import { IYtCreatorEntity } from '../../../creator/domain/models/yt-creator.model';
+import { YtCreatorModule } from '../../../creator/yt-creator.module';
+import { YtCreatorService } from '../../../creator/application/services/yt-creator.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { YtCreatorEntity } from '../../../creator/infrastructure/entities/yt-creator.entity';
 
+import { AppConfigService } from '@leocodeio-njs/njs-config';
+import { IYtCreatorRepository } from '../../../creator/domain/ports/yt-creator.repository';
+import { YtCreatorRepository } from '../../../creator/infrastructure/adapters/yt-creator.repository';
 describe('YtAuthController', () => {
   let ytAuthController: YtAuthController;
   let ytAuthService: YtAuthService;
@@ -23,9 +22,12 @@ describe('YtAuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
         LoggingModule,
-        TypeOrmModule.forFeature([YtAuthEntity]),
+        AppConfigModule,
+        YtCreatorModule,
+        YtAuthModule,
+        TypeOrmModule.forFeature([YtCreatorEntity]),
         TypeOrmModule.forRootAsync({
-          imports: [AppConfigModule, YtAuthModule],
+          imports: [AppConfigModule, YtCreatorModule],
           useFactory: (configService: AppConfigService) => ({
             ...configService.databaseConfig,
             entities: [__dirname + '/**/*.entity{.ts,.js}'],
@@ -36,9 +38,10 @@ describe('YtAuthController', () => {
       ],
       providers: [
         YtAuthService,
+        YtCreatorService,
         {
-          provide: IYtAuthRepository,
-          useClass: YtAuthRepository,
+          provide: IYtCreatorRepository,
+          useClass: YtCreatorRepository,
         },
       ],
       controllers: [YtAuthController],
@@ -50,119 +53,53 @@ describe('YtAuthController', () => {
     logger.setLogContext('YtAuthController.Test');
   });
 
-  describe('POST /creator', () => {
-    it('should create a new creator', async () => {
-      logger.log('Starting test: create new creator');
-      const creatorDto = {
-        creatorId: '1',
-        accessToken: '1',
-        refreshToken: '1',
-        status: YtCreatorStatus.ACTIVE,
-      };
-      const expectedResult = { id: '1', ...creatorDto } as IYtCreatorEntity;
+  describe('GET /auth', () => {
+    it('should return authentication URL', async () => {
+      logger.log('Starting test: get auth URL');
+      const expectedAuthUrl = 'https://accounts.google.com/o/oauth2/auth?...';
 
       jest
-        .spyOn(ytAuthService, 'createCreatorEntry')
+        .spyOn(ytAuthService, 'getAuthUrl')
+        .mockResolvedValue(expectedAuthUrl);
+
+      const result = await ytAuthController.authenticateYouTube();
+      expect(result).toBe(expectedAuthUrl);
+    });
+  });
+
+  describe('GET /oauth2callback', () => {
+    it('should handle OAuth callback', async () => {
+      logger.log('Starting test: handle OAuth callback');
+      const authCode = 'test_auth_code';
+      const expectedResult = {
+        accessToken: 'access_token',
+        refreshToken: 'refresh_token',
+      } as IYtCreatorEntity;
+
+      jest
+        .spyOn(ytAuthService, 'handleOAuthCallback')
         .mockResolvedValue(expectedResult);
 
-      const result = await ytAuthController.createCreatorEntry(
-        creatorDto as CreateEntryDto,
-      );
-      logger.log({
-        message: 'Create creator test completed',
-        input: creatorDto,
-        output: result,
-      });
-
+      const result = await ytAuthController.handleOAuthCallback(authCode);
       expect(result).toBe(expectedResult);
     });
   });
 
-  describe('GET /creator', () => {
-    it('should get creator by id and status', async () => {
-      logger.log('Starting test: get creator by id and status');
-      const query: GetCreatorEntryModel = {
-        creatorId: '1',
-        status: YtCreatorStatus.ACTIVE,
+  describe('GET /channel-info', () => {
+    it('should return channel information', async () => {
+      logger.log('Starting test: get channel info');
+      const expectedResult = {
+        channelId: 'channel_id',
+        title: 'Channel Title',
+        description: 'Channel Description',
       };
-      const expectedResult = {
-        id: '1',
-        creatorId: '1',
-        accessToken: '1',
-        refreshToken: '1',
-        status: YtCreatorStatus.ACTIVE,
-      } as IYtCreatorEntity;
 
       jest
-        .spyOn(ytAuthService, 'getCreatorEntries')
+        .spyOn(ytAuthService, 'getChannelInfo')
         .mockResolvedValue(expectedResult);
 
-      expect(
-        await ytAuthController.getCreatorEntries(query.creatorId, query.status),
-      ).toBe(expectedResult);
-    });
-
-    it('should get all creators when no params provided', async () => {
-      logger.log('Starting test: get all creators');
-      const expectedResult = [
-        {
-          id: '1',
-          creatorId: '1',
-          accessToken: '1',
-          refreshToken: '1',
-          status: YtCreatorStatus.ACTIVE,
-        },
-      ] as IYtCreatorEntity[];
-
-      jest
-        .spyOn(ytAuthService, 'getCreatorEntries')
-        .mockResolvedValue(expectedResult);
-
-      expect(await ytAuthController.getCreatorEntries(null, null)).toBe(
-        expectedResult,
-      );
-    });
-  });
-
-  describe('PUT /creator', () => {
-    it('should update creator by id', async () => {
-      logger.log('Starting test: update creator');
-      const creatorId = '1';
-      const updateDto = { status: YtCreatorStatus.INACTIVE };
-      const expectedResult = {
-        id: '1',
-        creatorId,
-        accessToken: '1',
-        refreshToken: '1',
-        status: YtCreatorStatus.INACTIVE,
-      } as IYtCreatorEntity;
-
-      jest
-        .spyOn(ytAuthService, 'updateCreatorEntry')
-        .mockResolvedValue(expectedResult);
-
-      expect(
-        await ytAuthController.updateCreatorEntry(
-          creatorId,
-          updateDto as UpdateEntryDto,
-        ),
-      ).toBe(expectedResult);
-    });
-  });
-
-  describe('DELETE /creator', () => {
-    it('should delete creator by id', async () => {
-      logger.log('Starting test: delete creator');
-      const creatorId = '1';
-      const expectedResult = `Creator with Id ${creatorId} deleted successfully!!!`;
-
-      jest
-        .spyOn(ytAuthService, 'deleteCreatorEntry')
-        .mockResolvedValue(expectedResult);
-
-      expect(await ytAuthController.deleteCreatorEntry(creatorId)).toBe(
-        expectedResult,
-      );
+      const result = await ytAuthController.getChannelInfo('creator_id');
+      expect(result).toBe(expectedResult);
     });
   });
 

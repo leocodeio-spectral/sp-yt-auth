@@ -11,6 +11,7 @@ import { AppConfigModule } from '@leocodeio-njs/njs-config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppConfigService } from '@leocodeio-njs/njs-config';
 import { YtAuthModule } from './modules/youtube/yt-auth.module';
+import { YtCreatorModule } from './modules/creator/yt-creator.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { YtAuthModule } from './modules/youtube/yt-auth.module';
     AuthModule,
     AppConfigModule,
     YtAuthModule,
+    YtCreatorModule,
     TypeOrmModule.forRootAsync({
       imports: [AppConfigModule, YtAuthModule],
       useFactory: (configService: AppConfigService) => ({
