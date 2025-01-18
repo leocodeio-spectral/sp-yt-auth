@@ -64,7 +64,7 @@ export class YtAuthService {
     }
   }
 
-  async handleOAuthCallback(code: string): Promise<IYtCreatorEntity> {
+  async handleOAuthCallback(code: string): Promise<string> {
     try {
       this.logger.log(
         'debug log 15 - at ' +
@@ -97,6 +97,7 @@ export class YtAuthService {
       try {
         const creatorDto: CreateEntryDto = {
           creatorId: '123e4567-e19b-11d1-a451-121114111111',
+          email: 'test@test.com',
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
           status: YtCreatorStatus.active,
@@ -107,7 +108,7 @@ export class YtAuthService {
         );
         const creator =
           await this.ytCreatorService.createCreatorEntry(creatorDto);
-        return creator;
+        return creator.id;
       } catch (error) {
         this.logger.error('Error saving creator:', error);
         throw new InternalServerErrorException('Error saving creator');

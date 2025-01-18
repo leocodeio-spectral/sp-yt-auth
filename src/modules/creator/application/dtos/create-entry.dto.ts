@@ -5,11 +5,20 @@ import {
   IsUUID,
   IsEnum,
   IsOptional,
+  IsEmail,
 } from 'class-validator';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 import { BaseDto } from '../../../common/dto/base.dto';
 
 export class CreateEntryDto extends BaseDto {
+  @ApiProperty({
+    description: 'Creator email',
+    example: 'example@gmail.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
   @ApiProperty({
     description: 'Creator UUID',
     example: '123e4567-e89b-12d3-a456-426614174000',

@@ -27,7 +27,8 @@ export class YtAuthController {
   @Public()
   @Get('oauth2callback')
   async handleOAuthCallback(@Query('code') code: string) {
-    return this.ytAuthService.handleOAuthCallback(code);
+    const creatorId = await this.ytAuthService.handleOAuthCallback(code);
+    return creatorId;
   }
 
   @Get('channel-info')

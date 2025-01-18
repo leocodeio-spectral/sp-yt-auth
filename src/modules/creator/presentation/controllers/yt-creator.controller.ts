@@ -56,17 +56,29 @@ export class YtCreatorController {
 
   @Put('')
   async updateCreatorEntry(
-    @Query('creatorId') creatorId: string,
+    @Query('id') id: string,
     @Body() updateDto: UpdateEntryDto,
   ): Promise<IYtCreatorEntity> {
-    return this.ytCreatorService.updateCreatorEntry(creatorId, updateDto);
+    return this.ytCreatorService.updateCreatorEntry(id, updateDto);
   }
 
   @Delete('')
-  async deleteCreatorEntry(
-    @Query('creatorId') creatorId: string,
-  ): Promise<string> {
-    console.log('test possibilities', creatorId);
-    return this.ytCreatorService.deleteCreatorEntry(creatorId);
+  async deleteCreatorEntry(@Query('id') id: string): Promise<string> {
+    console.log('test possibilities', id);
+    return this.ytCreatorService.deleteCreatorEntry(id);
+  }
+
+  @Get('email')
+  async getCreatorEntryByEmail(
+    @Query('email') email: string,
+  ): Promise<IYtCreatorEntity> {
+    return this.ytCreatorService.getCreatorEntryByEmail(email);
+  }
+
+  @Get('id')
+  async getCreatorEntryById(
+    @Query('id') id: string,
+  ): Promise<IYtCreatorEntity> {
+    return this.ytCreatorService.getCreatorEntryById(id);
   }
 }
