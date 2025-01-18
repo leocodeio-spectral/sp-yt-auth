@@ -8,8 +8,8 @@ import {
 } from 'typeorm';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 
-@Entity({ name: 'yt_auth' })
-export class YtAuthEntity {
+@Entity({ name: 'yt_creator' })
+export class YtCreatorEntity {
   @PrimaryGeneratedColumn('uuid')
   @Generated('uuid')
   id: string;
@@ -26,12 +26,12 @@ export class YtAuthEntity {
   @Column({
     type: 'enum',
     enum: YtCreatorStatus,
-    default: YtCreatorStatus.ACTIVE,
+    default: YtCreatorStatus.active,
   })
   status: YtCreatorStatus;
 
-  @CreateDateColumn({ name: 'create_at' })
-  createAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

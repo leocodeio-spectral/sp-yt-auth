@@ -1,16 +1,18 @@
 import {
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
-import { IYtCreatorEntity } from '../../domain/models/yt-auth.model';
-import { IYtAuthRepository } from '../../domain/ports/yt-auth.repository';
-import { CreateEntryDto } from '../dtos/create-entry.dto';
-import { GetCreatorEntryModel } from '../../domain/enums/get-creator-entry.model';
 import { google } from 'googleapis';
 import * as fs from 'fs';
+import { IYtCreatorEntity } from '../../../creator/domain/models/yt-creator.model';
+import { YtCreatorStatus } from '../../../creator/domain/enums/yt-creator-status.enum';
+import { GetCreatorEntryModel } from '../../../creator/domain/enums/get-creator-entry.model';
+import { CreateEntryDto } from '../../../creator/application/dtos/create-entry.dto';
+import { Inject } from '@nestjs/common';
+import { YtCreatorService } from '../../../creator/application/services/yt-creator.service';
 
 @Injectable()
 export class YtAuthService {
@@ -22,10 +24,13 @@ export class YtAuthService {
     'https://www.googleapis.com/auth/youtube.upload',
   ];
   private readonly REDIRECT_URI =
-    'http://localhost:3001/v1.0/youtube/oauth2callback';
+    'http://localhost:3001/v1.0/youtube/api/oauth2callback';
   private oauth2Client;
 
-  constructor(private readonly ytAuthRepository: IYtAuthRepository) {
+  constructor(
+    @Inject(YtCreatorService)
+    private readonly ytCreatorService: YtCreatorService,
+  ) {
     try {
       const credentials = JSON.parse(
         fs.readFileSync(this.CLIENT_SECRETS_FILE, 'utf8'),
@@ -54,46 +59,91 @@ export class YtAuthService {
       return authUrl;
     } catch (error) {
       this.logger.error('Failed to generate auth URL:', error);
-      throw new Error('Authentication failed');
+      throw new InternalServerErrorException('Authentication failed');
     }
   }
 
   async handleOAuthCallback(code: string): Promise<IYtCreatorEntity> {
     try {
-      const { tokens } = await this.oauth2Client.getToken(code);
-      this.logger.log('Received OAuth tokens');
+      this.logger.log(
+        'debug log 15 - at ' +
+          __filename.split('/').pop() +
+          ' - Received OAuth code:',
+        code,
+      );
+      let tokens: any;
+      try {
+        tokens = (await this.oauth2Client.getToken(code)).tokens;
+      } catch (error) {
+        this.logger.error('Error getting tokens:', error);
+        throw new InternalServerErrorException(
+          'Error getting tokens through provided code',
+        );
+      }
+      this.logger.log(
+        'debug log 16 - at ' +
+          __filename.split('/').pop() +
+          ' - Received OAuth tokens',
+        tokens,
+      );
+
+      if (!tokens.access_token || !tokens.refresh_token) {
+        throw new UnauthorizedException('Invalid tokens');
+      }
 
       // Save credentials to database
-      const creatorDto: CreateEntryDto = {
-        creatorId: '123e4567-e19b-11d1-a451-121114111111',
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        status: YtCreatorStatus.ACTIVE,
-      };
 
-      return this.createCreatorEntry(creatorDto);
+      try {
+        const creatorDto: CreateEntryDto = {
+          creatorId: '123e4567-e19b-11d1-a451-121114111111',
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          status: YtCreatorStatus.active,
+        };
+        this.logger.log(
+          'debug log 17 - at ' + __filename.split('/').pop(),
+          creatorDto,
+        );
+        const creator =
+          await this.ytCreatorService.createCreatorEntry(creatorDto);
+        return creator;
+      } catch (error) {
+        this.logger.error('Error saving creator:', error);
+        throw new InternalServerErrorException('Error saving creator');
+      }
     } catch (error) {
       this.logger.error('OAuth callback failed:', error);
-      throw new Error('Failed to complete authentication');
+      throw error;
     }
   }
 
-  async getChannelInfo(): Promise<any> {
+  async getChannelInfo(creatorId: string): Promise<any> {
+    this.logger.log(
+      'debug log 18 - at ' +
+        __filename.split('/').pop() +
+        ' - Getting channel info for creator:',
+      creatorId,
+    );
+    if (!creatorId) {
+      throw new UnauthorizedException('Creator ID is required');
+    }
     try {
       // Get latest active creator
-      const creator = await this.getCreatorEntries({
-        creatorId: '123e4567-e19b-11d1-a451-121114111111',
-        status: YtCreatorStatus.ACTIVE,
-      });
+      const creator = await this.ytCreatorService.getCreatorEntries({
+        creatorId: creatorId,
+        status: YtCreatorStatus.active,
+      } as GetCreatorEntryModel);
 
       this.logger.log('Creator found - yt-auth.service.ts', creator);
 
-      if (creator instanceof Array && creator.length === 0) {
-        throw new UnauthorizedException('No authenticated creator found');
+      if (creator.length === 0) {
+        throw new NotFoundException('No authenticated creator found');
       }
 
-      if (creator instanceof Array && creator.length > 1) {
-        throw new UnauthorizedException('Multiple creators found');
+      if (creator.length > 1) {
+        throw new InternalServerErrorException(
+          'Multiple creators found, please contact support',
+        );
       }
 
       // Set credentials
@@ -106,249 +156,29 @@ export class YtAuthService {
         refresh_token: creator[0].refreshToken,
       });
 
-      const youtube = google.youtube({
-        version: 'v3',
-        auth: this.oauth2Client,
-      });
+      try {
+        const youtube = google.youtube({
+          version: 'v3',
+          auth: this.oauth2Client,
+        });
 
-      const response = await youtube.channels.list({
-        part: ['snippet', 'contentDetails', 'statistics'],
-        mine: true,
-      });
+        const response = await youtube.channels.list({
+          part: ['snippet', 'contentDetails', 'statistics'],
+          mine: true,
+        });
 
-      this.logger.log('Channel info:', response.data);
+        this.logger.log('Channel info:', response.data);
 
-      return response.data;
+        return response.data;
+      } catch (error) {
+        this.logger.error('Failed to get channel info:', error);
+        throw new InternalServerErrorException(
+          'Youtube api Failed to get channel info',
+        );
+      }
     } catch (error) {
       this.logger.error('Failed to get channel info:', error);
-      throw new Error('Failed to get channel information');
-    }
-  }
-
-  // creator functions
-  async createCreatorEntry(
-    creatorDto: CreateEntryDto,
-  ): Promise<IYtCreatorEntity> {
-    try {
-      this.logger.log(
-        'debug log 1 - at ' + __filename.split('/').pop() + ' - creator input:',
-        JSON.stringify(creatorDto),
-      );
-      const creator = await this.ytAuthRepository.save(creatorDto);
-      this.logger.log(
-        'debug log 2 - at ' +
-          __filename.split('/').pop() +
-          ' - creator created:',
-        JSON.stringify(creator),
-      );
-      return creator;
-      // return {
-      //   id: Math.random().toString(36).substr(2, 9),
-      //   creatorId: creatorDto.creatorId,
-      //   accessToken: creatorDto.accessToken,
-      //   refreshToken: creatorDto.refreshToken,
-      //   status: creatorDto.status || YtCreatorStatus.ACTIVE,
-      // } as IYtCreatorEntity;
-    } catch (error) {
-      this.logger.error(
-        'error log 3 - at ' +
-          __filename.split('/').pop() +
-          ' - creator creation failed:',
-        JSON.stringify(error),
-      );
-      throw new Error('Creator not created');
-    }
-  }
-  // [TODO] - Make both of this function to be one
-  async getCreatorEntries(
-    query: GetCreatorEntryModel,
-  ): Promise<IYtCreatorEntity[] | IYtCreatorEntity> {
-    try {
-      this.logger.log(
-        'debug log 4 - at ' +
-          __filename.split('/').pop() +
-          ' - searching with query:',
-        JSON.stringify(query),
-      );
-      if (query.creatorId && query.status) {
-        const creator = await this.ytAuthRepository.find({
-          creatorId: query.creatorId,
-          status: query.status,
-        });
-        this.logger.log(
-          'debug log 5 - at ' +
-            __filename.split('/').pop() +
-            ' - creator found:',
-          JSON.stringify(creator),
-        );
-        if (!creator) {
-          throw new Error('Creator not found');
-        }
-        return creator;
-      } else if (query.creatorId) {
-        const creator = await this.ytAuthRepository.find({
-          creatorId: query.creatorId,
-        });
-        this.logger.log(
-          'debug log 5 - at ' +
-            __filename.split('/').pop() +
-            ' - creator found:',
-          JSON.stringify(creator),
-        );
-        if (creator instanceof Array && creator.length === 0) {
-          throw new NotFoundException('Creator not found');
-        }
-        return creator;
-      } else if (query.status) {
-        const creator = await this.ytAuthRepository.find({
-          status: query.status,
-        });
-        this.logger.log(
-          'debug log 5 - at ' +
-            __filename.split('/').pop() +
-            ' - creator found:',
-          JSON.stringify(creator),
-        );
-        return creator;
-      } else {
-        const creators = await this.ytAuthRepository.find(query);
-        this.logger.log(
-          'debug log 5 - at ' +
-            __filename.split('/').pop() +
-            ' - creators found:',
-          JSON.stringify(creators),
-        );
-        return creators;
-      }
-      // return {
-      //   id: query.id || '1',
-      //   creatorId: '1',
-      //   accessToken: '1',
-      //   refreshToken: '1',
-      //   status: query.status || YtCreatorStatus.ACTIVE,
-      // } as IYtCreatorEntity;
-    } catch (error) {
-      this.logger.error(
-        'error log 6 - at ' +
-          __filename.split('/').pop() +
-          ' - creator search failed:',
-        JSON.stringify(error),
-      );
-      throw new NotFoundException('Creator not found');
-    }
-  }
-
-  async updateCreatorEntry(
-    creatorId: string,
-    updateDto: Partial<IYtCreatorEntity>,
-  ): Promise<IYtCreatorEntity> {
-    try {
-      this.logger.log(
-        'debug log 7 - at ' +
-          __filename.split('/').pop() +
-          ' - updating creator:',
-        JSON.stringify({ creatorId, updateDto }),
-      );
-
-      // find the creator by id
-      this.logger.log(
-        'debug log 8 - at ' + __filename.split('/').pop() + ' - creator found',
-        creatorId,
-      );
-      const existingCreator = await this.ytAuthRepository.find({
-        creatorId,
-      });
-
-      if (!existingCreator) {
-        // [TODO] - Handle error more efficiently
-        this.logger.error(
-          'error log 9 - at ' +
-            __filename.split('/').pop() +
-            ' - Creator not found',
-          creatorId,
-        );
-        throw new Error('Creator not found');
-      }
-      // Duplicate error
-      // [TODO] - handle multiple creators efficiently
-      if (existingCreator instanceof Array) {
-        // [TODO] - Handle error more efficiently
-        this.logger.error(
-          'error log 10 - at ' +
-            __filename.split('/').pop() +
-            ' - Multiple creators found',
-        );
-        throw new Error('Multiple creators found');
-      }
-
-      this.logger.log(
-        'debug log 11 - at ' + __filename.split('/').pop() + ' - creator found',
-        existingCreator,
-      );
-
-      // update the creator
-      updateDto.status && (existingCreator.status = updateDto.status);
-      updateDto.accessToken &&
-        (existingCreator.accessToken = updateDto.accessToken);
-      updateDto.refreshToken &&
-        (existingCreator.refreshToken = updateDto.refreshToken);
-      existingCreator.updatedAt = new Date();
-      // save updated creator
-      const creator = await this.ytAuthRepository.save(existingCreator);
-      this.logger.log(
-        'debug log 12 - at ' +
-          __filename.split('/').pop() +
-          ' - creator updated:',
-        JSON.stringify(creator),
-      );
-      // return {
-      //   id: creatorId,
-      //   creatorId: '1',
-      //   accessToken: '1',
-      //   refreshToken: '1',
-      //   status: updateDto.status || YtCreatorStatus.ACTIVE,
-      // } as IYtCreatorEntity;
-      return creator;
-    } catch (error) {
-      this.logger.error(
-        'error log 13 - at ' +
-          __filename.split('/').pop() +
-          ' - creator update failed:',
-        JSON.stringify(error),
-      );
-      throw new Error('Creator not updated');
-    }
-  }
-
-  async deleteCreatorEntry(creatorId: string): Promise<string> {
-    try {
-      this.logger.log(
-        'debug log 14',
-        'debug log 14 - at ' +
-          __filename.split('/').pop() +
-          ' - deleting creator:',
-        creatorId,
-      );
-      const creator = await this.ytAuthRepository.delete(creatorId);
-      this.logger.log(
-        'debug log 15 - at ' +
-          __filename.split('/').pop() +
-          ' - creator deleted:',
-        JSON.stringify(creator),
-      );
-      // return {
-      //   id: creatorId,
-      //   creatorId: '1',
-      // } as IYtCreatorEntity;
-      return `Creator with Id ${creatorId} deleted successfully!!!`;
-    } catch (error) {
-      this.logger.error(
-        'error log 16 - at ' +
-          __filename.split('/').pop() +
-          ' - creator deletion failed:',
-        JSON.stringify(error),
-      );
-      throw new Error('Creator not deleted');
+      throw error;
     }
   }
 }
