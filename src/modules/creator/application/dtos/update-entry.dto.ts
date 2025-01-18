@@ -6,6 +6,22 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateEntryDto extends BaseDto {
   @ApiProperty({
+    description: 'YouTube creator id',
+    example: '11111111-1111-1111-1111-111111111111',
+  })
+  @IsString()
+  @IsOptional()
+  creatorId: string;
+
+  @ApiProperty({
+    description: 'YouTube creator email',
+    example: 'test@test.com',
+  })
+  @IsString()
+  @IsOptional()
+  email: string;
+
+  @ApiProperty({
     description: 'YouTube access token',
     example: 'ya29.a0AfH6SMBx7-gYj5N...',
   })

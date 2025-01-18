@@ -10,6 +10,7 @@ import { IYtCreatorRepository } from '../../domain/ports/yt-creator.repository';
 import { CreateEntryDto } from '../dtos/create-entry.dto';
 import { GetCreatorEntryModel } from '../../domain/enums/get-creator-entry.model';
 import { validateGetQuery } from '../functions/validate-get-query.function';
+import { UpdateEntryDto } from '../dtos/update-entry.dto';
 
 @Injectable()
 export class YtCreatorService {
@@ -87,7 +88,7 @@ export class YtCreatorService {
 
   async updateCreatorEntry(
     id: string,
-    updateDto: Partial<IYtCreatorEntity>,
+    updateDto: UpdateEntryDto,
   ): Promise<IYtCreatorEntity> {
     try {
       if (!id) {
@@ -136,6 +137,8 @@ export class YtCreatorService {
 
       // update the creator
       updateDto.status && (existingCreator.status = updateDto.status);
+      updateDto.creatorId && (existingCreator.creatorId = updateDto.creatorId);
+      updateDto.email && (existingCreator.email = updateDto.email);
       updateDto.accessToken &&
         (existingCreator.accessToken = updateDto.accessToken);
       updateDto.refreshToken &&

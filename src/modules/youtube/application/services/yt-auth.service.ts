@@ -96,7 +96,7 @@ export class YtAuthService {
 
       try {
         const creatorDto: CreateEntryDto = {
-          creatorId: '123e4567-e19b-11d1-a451-121114111111',
+          creatorId: '11111111-1111-1111-1111-111111111111',
           email: 'test@test.com',
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
@@ -119,34 +119,26 @@ export class YtAuthService {
     }
   }
 
-  async getChannelInfo(creatorId: string): Promise<any> {
+  async getChannelInfo(id: string): Promise<any> {
     this.logger.log(
       'debug log 18 - at ' +
         __filename.split('/').pop() +
         ' - Getting channel info for creator:',
-      creatorId,
+      id,
     );
-    if (!creatorId) {
+    if (!id) {
       throw new UnauthorizedException('Creator ID is required');
     }
     try {
       // Get latest active creator
-      const creator = await this.ytCreatorService.getCreatorEntries({
-        creatorId: creatorId,
-        status: YtCreatorStatus.active,
-      } as GetCreatorEntryModel);
+      const creator = await this.ytCreatorService.getCreatorEntryById(id);
 
       this.logger.log('Creator found - yt-auth.service.ts', creator);
 
-      if (creator.length === 0) {
+      if (!creator) {
         throw new NotFoundException('No authenticated creator found');
       }
 
-      if (creator.length > 1) {
-        throw new InternalServerErrorException(
-          'Multiple creators found, please contact support',
-        );
-      }
 
       // Set credentials
       this.logger.log(
@@ -154,8 +146,8 @@ export class YtAuthService {
         creator,
       );
       this.oauth2Client.setCredentials({
-        access_token: creator[0].accessToken,
-        refresh_token: creator[0].refreshToken,
+        access_token: creator.accessToken,
+        refresh_token: creator.refreshToken,
       });
 
       try {
