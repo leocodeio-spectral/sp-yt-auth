@@ -13,8 +13,9 @@ import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 import { CreateEntryDto } from '../../application/dtos/create-entry.dto';
 import { UpdateEntryDto } from '../../application/dtos/update-entry.dto';
 import { IYtCreatorEntity } from '../../domain/models/yt-auth.model';
-import { ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { GetCreatorEntryModel } from '../../domain/enums/get-creator-entry.model';
+import { Public } from '@leocodeio-njs/njs-auth';
 
 @ApiTags('Youtube')
 @ApiSecurity('x-api-key')
@@ -68,5 +69,20 @@ export class YtAuthController {
     return this.ytAuthService.deleteCreatorEntry(creatorId);
   }
 
-  // youtube connect endpoints
+  // YouTube connect endpoints
+  @Get('auth')
+  async authenticateYouTube() {
+    return this.ytAuthService.getAuthUrl();
+  }
+
+  @Public()
+  @Get('oauth2callback')
+  async handleOAuthCallback(@Query('code') code: string) {
+    return this.ytAuthService.handleOAuthCallback(code);
+  }
+
+  @Get('channel-info')
+  async getChannelInfo() {
+    return this.ytAuthService.getChannelInfo();
+  }
 }

@@ -7,7 +7,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
-import { BaseDto } from '../../../common/base.dto';
+import { BaseDto } from '../../../common/dto/base.dto';
 
 export class CreateEntryDto extends BaseDto {
   @ApiProperty({
@@ -39,7 +39,6 @@ export class CreateEntryDto extends BaseDto {
     enum: YtCreatorStatus,
     example: YtCreatorStatus.ACTIVE,
   })
-  
   @IsEnum(YtCreatorStatus)
   @IsNotEmpty()
   status: YtCreatorStatus;

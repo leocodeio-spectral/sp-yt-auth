@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
-import { BaseDto } from '../../../common/base.dto';
+import { BaseDto } from '../../../common/dto/base.dto';
 import { IsOptional, IsString } from 'class-validator';
 import { YtCreatorStatus } from '../../domain/enums/yt-creator-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
