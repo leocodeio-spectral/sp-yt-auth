@@ -103,6 +103,90 @@ describe('YtAuthController', () => {
     });
   });
 
+  describe('POST /upload', () => {
+    it('should upload a video with full metadata', async () => {
+      // Mock video file
+      const videoFile = {
+        filename: 'test.mp4',
+        mimetype: 'video/mp4',
+      } as Express.Multer.File;
+
+      // Test metadata with all optional fields
+      const metadata = {
+        title: 'Test Video',
+        description: 'Test Description',
+        tags: 'tag1,tag2,tag3',
+        privacyStatus: 'unlisted' as const,
+      };
+
+      const expectedResult = {
+        videoId: 'video_id',
+        title: metadata.title,
+        status: 'uploaded',
+      };
+
+      jest
+        .spyOn(ytAuthService, 'uploadVideo')
+        .mockResolvedValue(expectedResult);
+
+      const result = await ytAuthController.uploadVideo(
+        'creator_id',
+        videoFile,
+        metadata,
+      );
+
+      expect(ytAuthService.uploadVideo).toHaveBeenCalledWith(
+        'creator_id',
+        videoFile,
+        {
+          ...metadata,
+          tags: ['tag1', 'tag2', 'tag3'],
+        },
+      );
+      expect(result).toBe(expectedResult);
+    });
+
+    it('should upload a video with minimal metadata', async () => {
+      // Mock video file
+      const videoFile = {
+        filename: 'test.mp4',
+        mimetype: 'video/mp4',
+      } as Express.Multer.File;
+
+      // Test metadata with only required fields
+      const metadata = {
+        title: 'Test Video',
+        description: 'Test Description',
+      };
+
+      const expectedResult = {
+        videoId: 'video_id',
+        title: metadata.title,
+        status: 'uploaded',
+      };
+
+      jest
+        .spyOn(ytAuthService, 'uploadVideo')
+        .mockResolvedValue(expectedResult);
+
+      const result = await ytAuthController.uploadVideo(
+        'creator_id',
+        videoFile,
+        metadata,
+      );
+
+      expect(ytAuthService.uploadVideo).toHaveBeenCalledWith(
+        'creator_id',
+        videoFile,
+        {
+          ...metadata,
+          tags: undefined,
+        },
+      );
+      expect(result).toBe(expectedResult);
+    });
+  });
+
   afterEach(() => {
     logger.log('Test completed');
   });
