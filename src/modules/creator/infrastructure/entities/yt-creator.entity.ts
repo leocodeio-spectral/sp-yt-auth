@@ -17,6 +17,9 @@ export class YtCreatorEntity {
   @Column({ name: 'creator_id', type: 'uuid', unique: true })
   creatorId: string;
 
+  @Column({ name: 'email', type: 'text', unique: true })
+  email: string;
+
   @Column({ name: 'access_token', type: 'text', unique: true })
   accessToken: string;
 

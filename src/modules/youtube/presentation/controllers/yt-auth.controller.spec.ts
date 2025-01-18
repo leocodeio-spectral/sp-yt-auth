@@ -71,10 +71,7 @@ describe('YtAuthController', () => {
     it('should handle OAuth callback', async () => {
       logger.log('Starting test: handle OAuth callback');
       const authCode = 'test_auth_code';
-      const expectedResult = {
-        accessToken: 'access_token',
-        refreshToken: 'refresh_token',
-      } as IYtCreatorEntity;
+      const expectedResult = 'creator_id';
 
       jest
         .spyOn(ytAuthService, 'handleOAuthCallback')

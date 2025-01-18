@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -36,6 +37,7 @@ export class YtCreatorService {
       // return {
       //   id: Math.random().toString(36).substr(2, 9),
       //   creatorId: creatorDto.creatorId,
+      //   email: creatorDto.email,
       //   accessToken: creatorDto.accessToken,
       //   refreshToken: creatorDto.refreshToken,
       //   status: creatorDto.status || YtCreatorStatus.ACTIVE,
@@ -84,38 +86,39 @@ export class YtCreatorService {
   }
 
   async updateCreatorEntry(
-    creatorId: string,
+    id: string,
     updateDto: Partial<IYtCreatorEntity>,
   ): Promise<IYtCreatorEntity> {
     try {
+      if (!id) {
+        throw new BadRequestException('Id is required');
+      }
       this.logger.log(
         'debug log 7 - at ' +
           __filename.split('/').pop() +
           ' - updating creator:',
-        JSON.stringify({ creatorId, updateDto }),
+        JSON.stringify({ id, updateDto }),
       );
-
       // find the creator by id
       this.logger.log(
         'debug log 8 - at ' + __filename.split('/').pop() + ' - creator found',
-        creatorId,
+        id,
       );
-      const existingCreator = await this.ytCreatorRepository.find({
-        creatorId,
-      });
 
-      if (existingCreator.length === 0) {
+      const existingCreator = await this.ytCreatorRepository.findById(id);
+
+      if (!existingCreator) {
         // [TODO] - Handle error more efficiently
         this.logger.error(
           'error log 9 - at ' +
             __filename.split('/').pop() +
             ' - Creator not found',
-          creatorId,
+          id,
         );
         throw new NotFoundException('Creator not found');
       }
 
-      if (existingCreator.length > 1) {
+      if (!existingCreator) {
         // Duplicate error
         // [TODO] - handle multiple creators efficiently
         this.logger.error(
@@ -132,14 +135,14 @@ export class YtCreatorService {
       );
 
       // update the creator
-      updateDto.status && (existingCreator[0].status = updateDto.status);
+      updateDto.status && (existingCreator.status = updateDto.status);
       updateDto.accessToken &&
-        (existingCreator[0].accessToken = updateDto.accessToken);
+        (existingCreator.accessToken = updateDto.accessToken);
       updateDto.refreshToken &&
-        (existingCreator[0].refreshToken = updateDto.refreshToken);
-      existingCreator[0].updatedAt = new Date();
+        (existingCreator.refreshToken = updateDto.refreshToken);
+      existingCreator.updatedAt = new Date();
       // save updated creator
-      const creator = await this.ytCreatorRepository.save(existingCreator[0]);
+      const creator = await this.ytCreatorRepository.save(existingCreator);
       this.logger.log(
         'debug log 12 - at ' +
           __filename.split('/').pop() +
@@ -165,9 +168,9 @@ export class YtCreatorService {
     }
   }
 
-  async deleteCreatorEntry(creatorId: string): Promise<string> {
+  async deleteCreatorEntry(id: string): Promise<string> {
     try {
-      const isCreatorExist = await this.ytCreatorRepository.find({ creatorId });
+      const isCreatorExist = await this.ytCreatorRepository.findById(id);
       this.logger.log(
         'debug log 13 - at ' +
           __filename.split('/').pop() +
@@ -175,7 +178,7 @@ export class YtCreatorService {
         JSON.stringify(isCreatorExist),
       );
 
-      if (isCreatorExist.length === 0) {
+      if (!isCreatorExist) {
         throw new NotFoundException('Creator not found');
       }
 
@@ -183,20 +186,20 @@ export class YtCreatorService {
         'debug log 14 - at ' +
           __filename.split('/').pop() +
           ' - deleting creator:',
-        creatorId,
+        id,
       );
-      await this.ytCreatorRepository.delete(creatorId);
+      await this.ytCreatorRepository.delete(id);
       this.logger.log(
         'debug log 15 - at ' +
           __filename.split('/').pop() +
           ' - creator deleted:',
-        creatorId,
+        id,
       );
       // return {
       //   id: creatorId,
       //   creatorId: '1',
       // } as IYtCreatorEntity;
-      return `Creator with Id ${creatorId} deleted successfully!!!`;
+      return `Creator with Id ${id} deleted successfully!!!`;
     } catch (error) {
       this.logger.error(
         'error log 16 - at ' +
@@ -206,5 +209,13 @@ export class YtCreatorService {
       );
       throw error;
     }
+  }
+
+  async getCreatorEntryByEmail(email: string): Promise<IYtCreatorEntity> {
+    return this.ytCreatorRepository.findByEmail(email);
+  }
+
+  async getCreatorEntryById(id: string): Promise<IYtCreatorEntity> {
+    return this.ytCreatorRepository.findById(id);
   }
 }

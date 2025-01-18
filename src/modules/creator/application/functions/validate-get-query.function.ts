@@ -25,7 +25,7 @@ export const validateGetQuery = (query: GetCreatorEntryModel) => {
     };
   }
   return {
-    creatorId: query.creatorId,
+    id: query.creatorId,
     status: query.status,
   };
 };

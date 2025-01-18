@@ -13,7 +13,7 @@ export class YtCreatorRepository implements IYtCreatorRepository {
     private readonly ytCreatorRepository: Repository<YtCreatorEntity>,
   ) {}
 
-  async find(query: GetCreatorEntryModel): Promise<IYtCreatorEntity[]> {
+  async find(query: GetCreatorEntryModel): Promise<YtCreatorEntity[]> {
     return this.ytCreatorRepository.find({ where: query });
   }
 
@@ -21,7 +21,15 @@ export class YtCreatorRepository implements IYtCreatorRepository {
     return this.ytCreatorRepository.save(creator);
   }
 
-  async delete(creatorId: string): Promise<void> {
-    await this.ytCreatorRepository.delete({ creatorId });
+  async delete(id: string): Promise<void> {
+    await this.ytCreatorRepository.delete(id);
+  }
+
+  async findByEmail(email: string): Promise<YtCreatorEntity> {
+    return this.ytCreatorRepository.findOne({ where: { email } });
+  }
+
+  async findById(id: string): Promise<YtCreatorEntity> {
+    return this.ytCreatorRepository.findOneBy({ id });
   }
 }
