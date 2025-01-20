@@ -14,6 +14,7 @@ import { CreateEntryDto } from '../../../creator/application/dtos/create-entry.d
 import { Inject } from '@nestjs/common';
 import { YtCreatorService } from '../../../creator/application/services/yt-creator.service';
 import { Readable } from 'stream';
+import { UpdateEntryDto } from 'src/modules/creator/application/dtos/update-entry.dto';
 
 @Injectable()
 export class YtAuthService {
@@ -139,7 +140,6 @@ export class YtAuthService {
         throw new NotFoundException('No authenticated creator found');
       }
 
-
       // Set credentials
       this.logger.log(
         'OAuth2 client credentials set - yt-auth.service.ts',
@@ -177,7 +177,7 @@ export class YtAuthService {
   }
 
   async uploadVideo(
-    creatorId: string,
+    id: string,
     videoFile: Express.Multer.File,
     metadata: {
       title: string;
@@ -186,16 +186,13 @@ export class YtAuthService {
       privacyStatus?: 'private' | 'unlisted' | 'public';
     },
   ): Promise<any> {
-    this.logger.log('Starting video upload for creator:', creatorId);
+    this.logger.log('Starting video upload for creator:', id);
 
     try {
       // Get creator credentials
-      const creator = await this.ytCreatorService.getCreatorEntries({
-        creatorId: creatorId,
-        status: YtCreatorStatus.active,
-      } as GetCreatorEntryModel);
+      const creator = await this.ytCreatorService.getCreatorEntryById(id);
 
-      if (creator.length === 0) {
+      if (!creator) {
         throw new NotFoundException('No authenticated creator found');
       }
       this.logger.log('Creator found - yt-auth.service.ts', creator);
@@ -203,8 +200,8 @@ export class YtAuthService {
 
       try {
         this.oauth2Client.setCredentials({
-          access_token: creator[0].accessToken,
-          refresh_token: creator[0].refreshToken,
+          access_token: creator.accessToken,
+          refresh_token: creator.refreshToken,
         });
       } catch (error) {
         this.logger.error('Failed to set credentials:', error);
@@ -212,6 +209,17 @@ export class YtAuthService {
           'Failed to set credentials to YouTube api',
         );
       }
+
+      // Refresh token if it is expired
+      if (await this.getTokenValidity(creator.accessToken)) {
+        creator.accessToken = await this.refreshToken(creator.refreshToken);
+      }
+
+      // Update creator entry
+      await this.ytCreatorService.updateCreatorEntry(creator.id, {
+        accessToken: creator.accessToken,
+        refreshToken: creator.refreshToken,
+      } as UpdateEntryDto);
 
       let youtube: youtube_v3.Youtube;
       try {
@@ -268,6 +276,38 @@ export class YtAuthService {
     } catch (error) {
       this.logger.error('Failed to upload video:', error);
       throw error;
+    }
+  }
+
+  async getTokenValidity(token: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`,
+      );
+      const data = await response.json();
+      this.logger.log('Token validity:', data);
+      return data.expires_in > 0;
+    } catch (error) {
+      this.logger.error('Failed to get token validity:', error);
+      throw new InternalServerErrorException('Failed to get token validity');
+    }
+  }
+
+  async refreshToken(refreshToken: string): Promise<string> {
+    try {
+      // Set the refresh token
+      this.oauth2Client.setCredentials({
+        refresh_token: refreshToken,
+      });
+
+      // Get a new access token
+      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      this.logger.log('Token refreshed successfully');
+
+      return credentials.access_token;
+    } catch (error) {
+      this.logger.error('Failed to refresh token:', error);
+      throw new InternalServerErrorException('Failed to refresh token');
     }
   }
 }
