@@ -39,7 +39,7 @@ export class YtAuthController {
   @Post('upload')
   @UseInterceptors(FileInterceptor('video'))
   async uploadVideo(
-    @Query('creatorId') creatorId: string,
+    @Query('id') id: string,
     @UploadedFile() videoFile: Express.Multer.File,
     @Body()
     metadata: {
@@ -49,9 +49,19 @@ export class YtAuthController {
       privacyStatus?: 'private' | 'unlisted' | 'public';
     },
   ) {
-    return this.ytAuthService.uploadVideo(creatorId, videoFile, {
+    return this.ytAuthService.uploadVideo(id, videoFile, {
       ...metadata,
       tags: metadata.tags ? metadata.tags.split(',') : undefined,
     });
+  }
+
+  @Get('get-token-validity')
+  async getTokenValidity(@Query('token') token: string) {
+    return this.ytAuthService.getTokenValidity(token);
+  }
+
+  @Get('refresh-token')
+  async refreshToken(@Query('refreshToken') refreshToken: string) {
+    return this.ytAuthService.refreshToken(refreshToken);
   }
 }

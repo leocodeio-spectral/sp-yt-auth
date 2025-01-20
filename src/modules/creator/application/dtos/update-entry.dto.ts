@@ -26,7 +26,7 @@ export class UpdateEntryDto extends BaseDto {
     example: 'ya29.a0AfH6SMBx7-gYj5N...',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   accessToken: string;
 
   @ApiProperty({
