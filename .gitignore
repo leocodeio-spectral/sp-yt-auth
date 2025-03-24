@@ -4,6 +4,7 @@
 /build
 .npmrc
 secrets
+
 # Logs
 logs
 logs*.json

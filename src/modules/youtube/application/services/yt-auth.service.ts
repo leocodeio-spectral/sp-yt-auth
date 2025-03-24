@@ -15,6 +15,7 @@ import { Inject } from '@nestjs/common';
 import { YtCreatorService } from '../../../creator/application/services/yt-creator.service';
 import { Readable } from 'stream';
 import { UpdateEntryDto } from 'src/modules/creator/application/dtos/update-entry.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class YtAuthService {
@@ -97,7 +98,8 @@ export class YtAuthService {
 
       try {
         const creatorDto: CreateEntryDto = {
-          creatorId: '11111111-1111-1111-1111-111111111111',
+          // creatorId: '11111111-1111-1111-1111-111111111111',
+          creatorId: uuidv4(),
           email: 'test@test.com',
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
